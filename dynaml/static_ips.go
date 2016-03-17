@@ -32,6 +32,46 @@ func func_static_ips(arguments []Expression, binding Binding) (yaml.Node, Evalua
 	return generateStaticIPs(binding, indices)
 }
 
+func func_static_ip_range(arguments []Expression, binding Binding) (yaml.Node, EvaluationInfo, bool) {
+	args := make([]int, len(arguments))
+	for i, arg := range arguments {
+		index, info, ok := arg.Evaluate(binding)
+		if !ok {
+			return nil, info, false
+		}
+
+		index64, ok := index.Value().(int64)
+		if !ok {
+			return nil, info, false
+		}
+		args[i] = int(index64)
+	}
+	
+	if len(args) < 2 || len(args) > 3 {
+		return nil, fmt.Sprintf("static_ip_range requires 2 or 3 args"), false
+	}
+	base := args[0]
+	count := args[1]
+	stride := 1
+	if len(args) == 3 {
+		stride = args[3]
+	}
+	
+	if count <= 0 {
+		return nil, fmt.Sprintf("count can't be <= 0"), false
+	}		
+	if stride == 0 {
+		return nil, fmt.Sprintf("stride can't be == 0"), false
+	}		
+	
+	indices := make([]int, count)
+	for i := 0; i < count; i++ {
+		indices[i] = base + stride * count
+	}
+
+	return generateStaticIPs(binding, indices)
+}
+
 func generateStaticIPs(binding Binding, indices []int) (yaml.Node, EvaluationInfo, bool) {
 	info := DefaultInfo()
 
